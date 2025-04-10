@@ -2,75 +2,155 @@ package org.gaplo917.mcpservercoinprice
 
 import org.slf4j.LoggerFactory
 import org.springframework.ai.tool.annotation.Tool
-import org.springframework.core.ParameterizedTypeReference
+import org.springframework.http.HttpMethod
+import org.springframework.http.HttpStatus
+import org.springframework.http.client.ClientHttpResponse
 import org.springframework.stereotype.Service
+import org.springframework.web.client.ResponseErrorHandler
 import org.springframework.web.client.RestClient
-import java.util.*
+import java.net.URI
 
 
 interface CoinPriceService {
-    fun getCryptocurrencyPrice(symbols: List<String>): List<CoinPrice>
+    fun searchCryptocurrency(query: String): CryptoData
+    fun getMarketDataByCryptocurrencyId(id: String): CryptoMarketData
 }
 
-data class CoinPrice(
-    val symbol: String,
-    val price: String,
-    val time: Long,
-    val volume: String
+data class CryptoData(
+    val coins: List<Coin>,
+    val exchanges: List<Exchange>,
+    val icos: List<Any>,
+    val categories: List<Category>,
+    val nfts: List<Nft>
 )
 
-data class CryptoTicker(
+data class Coin(
+    val id: String,
+    val name: String,
+    val api_symbol: String,
     val symbol: String,
-    val openPrice: String,
-    val highPrice: String,
-    val lowPrice: String,
-    val lastPrice: String,
-    val volume: String,
-    val quoteVolume: String,
-    val openTime: Long,
-    val closeTime: Long,
-    val firstId: Long,
-    val lastId: Long,
-    val count: Int
+    val market_cap_rank: Int,
+)
+
+data class Exchange(
+    val id: String,
+    val name: String,
+    val market_type: String,
+)
+
+data class Category(
+    val id: String,
+    val name: String
+)
+
+data class Nft(
+    val id: String,
+    val name: String,
+    val symbol: String,
+    val thumb: String
+)
+
+data class CryptoMarketData(
+    val name: String?,
+    val tickers: List<Ticker>
+)
+
+data class Ticker(
+    val base: String?,
+    val target: String?,
+    val market: Market?,
+    val last: Int?,
+    val volume: Double?,
+    val cost_to_move_up_usd: Double?,
+    val cost_to_move_down_usd: Double?,
+    val converted_last: ConvertedPrice?,
+    val converted_volume: ConvertedPrice?,
+    val trust_score: String?,
+    val bid_ask_spread_percentage: Double?,
+    val timestamp: String?,
+    val last_traded_at: String?,
+    val last_fetch_at: String?,
+    val is_anomaly: Boolean?,
+    val is_stale: Boolean?,
+    val coin_id: String?,
+    val target_coin_id: String?
+)
+
+data class Market(
+    val name: String,
+    val identifier: String,
+    val has_trading_incentive: Boolean,
+)
+
+data class ConvertedPrice(
+    val btc: Double?,
+    val eth: Double?,
+    val usd: Double?
 )
 
 @Service
-class CoinPriceServiceImpl : CoinPriceService {
+class CoinPriceServiceImpl() : CoinPriceService, ResponseErrorHandler {
     private val logger = LoggerFactory.getLogger(this::class.java)
 
     private val client by lazy {
         RestClient.builder()
-            .baseUrl("https://api.binance.com")
+            .baseUrl("https://api.coingecko.com/api/v3/")
             .build()
     }
 
-    data class TextInput(val input: String)
+    @Tool(description = "search cryptocurrency information by user input query.")
+    override fun searchCryptocurrency(query: String): CryptoData {
+        logger.info("[DEMO] request search with query: {}", query)
 
-    @Tool(description = "convert all characters to uppercase for symbols.")
-    fun toUpperCase(textInput: TextInput): String {
-        return textInput.input.uppercase(Locale.getDefault())
-    }
-
-    // Sample
-    // GET https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT","ETHUSDT"]&type=MINI
-    @Tool(description = "Get cryptocurrency price by symbols. Always use a pair with USDT, i.e. BTCUSDT")
-    override fun getCryptocurrencyPrice(symbols: List<String>): List<CoinPrice> {
-        logger.info("[DEMO_COIN_PRICE] request tickers with symbols: {}", symbols)
-
-        return client.get().uri("/api/v3/ticker/24hr") {
-            it.queryParam("symbols", symbols.joinToString(",", prefix = "[", postfix = "]") { "\"$it\"" })
-                .queryParam("type", "MINI")
+        val resp = client.get().uri("search") {
+            it.queryParam("query", query)
                 .build()
         }.retrieve()
-            .body(object : ParameterizedTypeReference<List<CryptoTicker>>() {})
-            ?.map { it -> CoinPrice(
-                symbol = it.symbol,
-                price = it.lastPrice,
-                time = it.closeTime,
-                volume = it.volume
-            ) }
-            ?.also { logger.info("[DEMO_COIN_PRICE] result: {}", it) }
-            ?: listOf()
+            .onStatus(this)
+            .body(CryptoData::class.java)
+            ?: CryptoData(
+                coins = listOf(),
+                exchanges = listOf(),
+                icos = listOf(),
+                categories = listOf(),
+                nfts = listOf()
+            )
 
+        logger.info("[DEMO] search result by query={}: {}", query, resp)
+        return resp
+    }
+
+    @Tool(description = "get cryptocurrency market data by id. The id must be used by the return of the searchCryptocurrency tools.")
+    override fun getMarketDataByCryptocurrencyId(id: String): CryptoMarketData {
+        logger.info("[DEMO] request market data with id: {}", id)
+
+        val resp = client.get().uri("coins/${id}/tickers")
+            .retrieve()
+            .onStatus(this)
+            .body(CryptoMarketData::class.java)
+            ?: CryptoMarketData(name = "", tickers = listOf())
+
+        logger.info("[DEMO] market data result by id={}: {}", id, resp)
+
+        return resp
+    }
+
+    override fun hasError(response: ClientHttpResponse): Boolean {
+        return response.statusCode != HttpStatus.OK
+    }
+
+    override fun handleError(
+        url: URI,
+        method: HttpMethod,
+        response: ClientHttpResponse
+    ) {
+        logger.error(
+            "[DEMO] API returned error code={} url={}, method={}, response={}",
+            response.statusCode,
+            method,
+            url,
+            response.body
+        )
+        super.handleError(url, method, response)
     }
 }
