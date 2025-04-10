@@ -53,13 +53,12 @@ class CoinPriceServiceImpl : CoinPriceService {
 
     // Sample
     // GET https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT","ETHUSDT"]&type=MINI
-    // [{"symbol":"BTCUSDT","openPrice":"96224.02000000","highPrice":"96439.69000000","lowPrice":"94640.00000000","lastPrice":"95494.89000000","volume":"27858.82523000","quoteVolume":"2657591443.13856260","openTime":1732756510747,"closeTime":1732842910747,"firstId":4166814897,"lastId":4171738797,"count":4923901}]
     @Tool(description = "Get cryptocurrency price by symbols. Always use a pair with USDT, i.e. BTCUSDT")
     override fun getCryptocurrencyPrice(symbols: List<String>): List<CoinPrice> {
         logger.info("[DEMO_COIN_PRICE] request tickers with symbols: {}", symbols)
 
         return client.get().uri("/api/v3/ticker/24hr") {
-            it.queryParam("symbols", """[${symbols.joinToString(",") { "\"$it\"" }}]""")
+            it.queryParam("symbols", symbols.joinToString(",", prefix = "[", postfix = "]") { "\"$it\"" })
                 .queryParam("type", "MINI")
                 .build()
         }.retrieve()
@@ -70,6 +69,7 @@ class CoinPriceServiceImpl : CoinPriceService {
                 time = it.closeTime,
                 volume = it.volume
             ) }
+            ?.also { logger.info("[DEMO_COIN_PRICE] result: {}", it) }
             ?: listOf()
 
     }
