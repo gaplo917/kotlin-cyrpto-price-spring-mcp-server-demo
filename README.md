@@ -1,54 +1,44 @@
 # Kotlin Crypto Price Spring MCP Server Demo
 
-A demonstration project showcasing how to build a Model Context Protocol (MCP) server using Spring AI and Kotlin. This server provides cryptocurrency price information from Binance API through MCP-compatible tools.
+A demonstration project showcasing the integration of Spring AI's Model Context Protocol (MCP) server with a cryptocurrency price API service. This project allows AI models to retrieve real-time cryptocurrency information through a standardized interface.
 
 ## Overview
 
-This project implements an MCP server that allows AI models to retrieve real-time cryptocurrency prices. It uses:
+This project implements a Spring Boot application that serves as an MCP server, providing tools for AI models to:
 
-- Spring Boot 3.4.4
-- Kotlin 1.9.25
-- Spring AI MCP Server
-- Model Context Protocol (MCP) SDK 0.8.1
+1. Search for cryptocurrencies by name or symbol
+2. Retrieve market data for specific cryptocurrencies
+
+The application uses the CoinGecko API to fetch real-time cryptocurrency data.
 
 ## Features
 
-- **Cryptocurrency Price Tool**: Fetch real-time prices for cryptocurrencies from Binance API
-- **Text Transformation Tool**: Simple text transformation utility (uppercase conversion)
-- **MCP Server Implementation**: Exposes tools via the Model Context Protocol
+- **Cryptocurrency Search**: Search for cryptocurrencies, exchanges, categories, and NFTs
+- **Market Data Retrieval**: Get detailed market data for specific cryptocurrencies
+- **MCP Integration**: Exposes functionality as tools for AI models via Spring AI's MCP server
 - **Logging**: Comprehensive logging of tool requests and responses
 
-## API Endpoints
+## Technologies
 
-The server exposes MCP endpoints at:
-- `/mcp/messages` - Server-Sent Events (SSE) endpoint for MCP communication
+- Kotlin 1.9.25
+- Spring Boot 3.4.4
+- Spring AI MCP Server
+- Model Context Protocol SDK 0.8.1
+- Java 17
 
-## Tools Available
+## Project Structure
 
-1. **getCryptocurrencyPrice**
-   - Description: Get cryptocurrency price by symbols
-   - Parameters: `symbols` (List of strings, e.g., ["BTCUSDT", "ETHUSDT"])
-   - Returns: List of CoinPrice objects with symbol, price, time, and volume information
-
-2. **toUpperCase**
-   - Description: Convert all characters to uppercase for symbols
-   - Parameters: `textInput` (TextInput object with an input string)
-   - Returns: Uppercase string
-
-## Configuration
-
-The server runs on port 3001 by default and is configured with the following MCP settings:
-
-- Server name: binance-coinprice-server
-- Server version: 1.0.0
-- Server type: SYNC
-- SSE message endpoint: /mcp/messages
+```
+src/main/kotlin/org/gaplo917/mcpservercoinprice/
+├── CoinPriceService.kt         # Service for cryptocurrency data retrieval
+├── McpServerCoinPriceApplication.kt  # Main application class
+```
 
 ## Getting Started
 
 ### Prerequisites
 
-- JDK 21 or higher
+- JDK 17 or higher
 - Gradle
 
 ### Running the Application
@@ -57,57 +47,43 @@ The server runs on port 3001 by default and is configured with the following MCP
 ./gradlew bootRun
 ```
 
-The server will start on port 3001.
+The MCP server will start on the default port (typically 8080).
 
-### Building the Application
+## API Tools
 
-```bash
-./gradlew build
+The application exposes the following tools for AI models:
+
+### 1. Search Cryptocurrency
+
+```kotlin
+@Tool(description = "search cryptocurrency information by user input query.")
+fun searchCryptocurrency(query: String): CryptoData
 ```
 
-### Running Tests
+### 2. Get Market Data
 
-```bash
-./gradlew test
+```kotlin
+@Tool(description = "get cryptocurrency market data by id. The id must be used by the return of the searchCryptocurrency tools.")
+fun getMarketDataByCryptocurrencyId(id: String): CryptoMarketData
 ```
 
-## Usage Example
+## Data Models
 
-An AI model can connect to this MCP server to retrieve cryptocurrency prices by making tool calls to the `getCryptocurrencyPrice` function.
+- `CryptoData`: Contains lists of coins, exchanges, categories, and NFTs
+- `CryptoMarketData`: Contains market data including tickers for a specific cryptocurrency
+- `Coin`: Represents a cryptocurrency with its ID, name, symbol, and market cap rank
+- `Ticker`: Contains trading information for a cryptocurrency on a specific market
 
-Example request:
-```json
-{
-  "name": "getCryptocurrencyPrice",
-  "parameters": {
-    "symbols": ["BTCUSDT", "ETHUSDT"]
-  }
-}
-```
+## Integration with AI Models
 
-Example response:
-```json
-[
-  {
-    "symbol": "BTCUSDT",
-    "price": "95494.89000000",
-    "time": 1732842910747,
-    "volume": "27858.82523000"
-  },
-  {
-    "symbol": "ETHUSDT",
-    "price": "3456.78000000",
-    "time": 1732842910747,
-    "volume": "123456.78900000"
-  }
-]
-```
+This server can be used with AI models that support the Model Context Protocol (MCP), allowing them to retrieve cryptocurrency data in a standardized way. The Spring AI MCP Server handles the communication between the AI model and the cryptocurrency service.
 
 ## License
 
-[Add your license information here]
+This project is licensed under the terms included in the LICENSE file.
 
-## Acknowledgments
+## References
 
-- Spring AI team for the MCP server implementation
-- Model Context Protocol for standardizing AI tool interactions
+- [Spring AI Documentation](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-server-boot-starter-docs.html)
+- [Model Context Protocol](https://modelcontextprotocol.io/)
+- [CoinGecko API](https://www.coingecko.com/api/documentation)
