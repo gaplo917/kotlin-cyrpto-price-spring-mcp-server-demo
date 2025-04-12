@@ -24,7 +24,7 @@ The application uses the CoinGecko API to fetch real-time cryptocurrency data.
 - Spring Boot 3.4.4
 - Spring AI MCP Server
 - Model Context Protocol SDK 0.8.1
-- Java 17
+- Java 21
 
 ## Project Structure
 
@@ -38,7 +38,7 @@ src/main/kotlin/org/gaplo917/mcpservercoinprice/
 
 ### Prerequisites
 
-- JDK 17 or higher
+- JDK 21 or higher
 - Gradle
 
 ### Running the Application
